@@ -1,17 +1,18 @@
 # 🏔️ Compilador PyChua
 
-**PyChua** es un lenguaje de programación educativo con sintaxis inspirada en Python y palabras clave en **quechua**. Este proyecto implementa las fases de análisis de un compilador/transpilador: **léxico**, **sintáctico** y **semántico**, escritas completamente en Python.
+**PyChua** es un lenguaje de programación educativo con sintaxis inspirada en Python y palabras clave en **quechua**. Este proyecto implementa el pipeline completo de un transpilador: **léxico**, **sintáctico**, **semántico** y **generación de código**, escrito completamente en Python.
 
 ## 📋 Descripción
 
-PyChua permite escribir programas usando vocabulario quechua, con una estructura basada en indentación (al estilo de Python). El compilador procesa el código fuente en cuatro etapas:
+PyChua permite escribir programas usando vocabulario quechua, con una estructura basada en indentación (al estilo de Python). El transpilador procesa el código fuente en cinco etapas:
 
 1. **Analizador léxico** (`LexerQuechua`): convierte el código fuente en una lista de tokens clasificados (palabras clave, identificadores, literales, operadores, delimitadores), reportando los errores léxicos sin detener el análisis.
 2. **Procesador de indentación** (`IndentProcessor`): inyecta tokens `INDENT`/`DEDENT` en el flujo de tokens, usando el mismo algoritmo que el tokenizador de Python (pila de niveles de indentación).
 3. **Analizador sintáctico** (`Parser`): parser descendente recursivo que construye el **Árbol de Sintaxis Abstracta (AST)** a partir de los tokens, con reporte de errores sintácticos con línea y columna.
 4. **Analizador semántico** (`AnalizadorSemantico`): recorre el AST con una tabla de símbolos por ámbitos (global / función / clase) y valida lo que la gramática no puede atrapar: variables no declaradas, funciones o clases redeclaradas, aridad de llamadas, uso de `kutichiy`/`usqhaychiy`/`katiy` fuera de contexto y compatibilidad básica de tipos en operaciones.
+5. **Generador de código** (`GeneradorCodigo`): recorre el AST ya validado y produce el código Python equivalente como texto.
 
-> Como PyChua es un **transpilador** (su destino final es código Python, no código máquina), no necesita las fases clásicas de generación de código intermedio ni de optimización propias de un compilador tradicional: el propio AST cumple el rol de representación intermedia, y la optimización queda delegada al intérprete de Python. La última fase pendiente es la **generación de código** (AST → texto Python).
+> Como PyChua es un **transpilador** (su destino final es código Python, no código máquina), no necesita las fases clásicas de generación de código intermedio ni de optimización propias de un compilador tradicional: el propio AST cumple el rol de representación intermedia, y la optimización queda delegada al intérprete de Python.
 
 ## 🗣️ Palabras clave del lenguaje
 
@@ -121,12 +122,15 @@ COMPILADOR PYCHUA/
 ├── f3_analizador_semantico/
 │   ├── analizador_semantico.py # Recorrido del AST: validaciones semánticas
 │   └── tabla_simbolos.py       # Símbolo y Ámbito (tabla de símbolos por scopes)
+├── f4_generador_codigo/
+│   └── generador_codigo.py     # Recorrido del AST: emisión de código Python
 ├── src/
 │   ├── ejemplo.txt             # Programas de ejemplo en PyChua
 │   ├── ejemplo2.txt
 │   ├── ejemploAlexis.txt
 │   └── melany.txt
 ├── compilador_pychua.ipynb     # Notebook para ejecutar el compilador completo
+├── interfaz_pychua.py          # Interfaz gráfica (Tkinter) para todo el pipeline
 └── README.md
 ```
 
@@ -134,8 +138,16 @@ COMPILADOR PYCHUA/
 
 ### Requisitos
 
-- Python 3.10 o superior (solo usa la biblioteca estándar, sin dependencias externas)
+- Python 3.10 o superior (solo usa la biblioteca estándar, sin dependencias externas — Tkinter viene incluido con Python)
 - Jupyter Notebook (opcional, para usar el notebook interactivo)
+
+### Desde la interfaz gráfica
+
+```
+py interfaz_pychua.py
+```
+
+Escribe (o carga un ejemplo de `src/`) código PyChua en el cuadro superior y pulsa **TRANSPILAR A PYTHON**. Cada pestaña muestra el resultado de una fase (léxico, AST, semántico, código Python generado) y la última ejecuta ese código y muestra su salida — si el programa usa `tapuy` (input), la interfaz pide el valor con un cuadro de diálogo.
 
 ### Desde el notebook
 
@@ -148,6 +160,7 @@ from f1_analizador_lexico.analizador_lexico import LexerQuechua, imprimir_tabla
 from f1_analizador_lexico.indent_processor import IndentProcessor
 from f2_analizador_sintactico.parser import Parser
 from f3_analizador_semantico.analizador_semantico import AnalizadorSemantico, imprimir_resultado_semantico
+from f4_generador_codigo.generador_codigo import GeneradorCodigo, imprimir_codigo_generado
 
 with open("src/ejemplo.txt", encoding="utf-8") as f:
     codigo = f.read()
@@ -168,6 +181,11 @@ ast = parser.parsear()
 analizador = AnalizadorSemantico()
 errores_semanticos = analizador.analizar(ast)
 imprimir_resultado_semantico(errores_semanticos)
+
+# 5. Generación de código Python
+generador = GeneradorCodigo()
+codigo_python = generador.generar(ast)
+imprimir_codigo_generado(codigo_python)
 ```
 
 ## 🛠️ Detalles de implementación
@@ -175,7 +193,9 @@ imprimir_resultado_semantico(errores_semanticos)
 - **Lexer**: basado en un regex maestro compilado a partir de una tabla de patrones ordenada por prioridad (equivalente a un AFD). Soporta caracteres del quechua/español (`ñ`, tildes, `'`) en los identificadores.
 - **Manejo de errores**: los errores léxicos, sintácticos y semánticos se acumulan con su línea (y columna cuando aplica), permitiendo reportar múltiples errores en una sola pasada.
 - **Identificadores de clase**: se distinguen automáticamente porque inician con mayúscula.
-- **Analizador semántico**: usa una tabla de símbolos con un ámbito global y un ámbito por función/clase (sin anidamiento, ya que la gramática actual no permite `ruway` dentro de otro `ruway`/`ayllu`). Infiere tipos básicos (`yupay`, `chiqchi`, `simi`, `bool`, `lista`) de forma conservadora: solo reporta incompatibilidades cuando ambos operandos tienen un tipo conocido. Como el parser reutiliza `NodoLlamada` tanto para `foo(x)` como para `objeto.foo(x)` sin distinguirlas, la validación de existencia/aridad de una llamada solo se aplica cuando el nombre coincide con una función o clase global conocida; el resto se asume como posible llamada a método dinámico y no se marca como error.
+- **Analizador semántico**: usa una tabla de símbolos con un ámbito global y un ámbito por función/clase (sin anidamiento, ya que la gramática actual no permite `ruway` dentro de otro `ruway`/`ayllu`). Infiere tipos básicos (`yupay`, `chiqchi`, `simi`, `bool`, `lista`) de forma conservadora: solo reporta incompatibilidades cuando ambos operandos tienen un tipo conocido. Toda llamada `foo(x)` que no resuelva a una función o clase global conocida se reporta como "función no declarada".
+- **Llamadas directas vs. llamadas a método**: el parser distingue `foo(x)` (`NodoLlamada`) de `objeto.foo(x)` (`NodoLlamadaMetodo`) desde el análisis sintáctico, para que el semántico y el generador de código sepan sin ambigüedad si deben resolver `foo` contra la tabla de símbolos globales o emitirla como método del objeto.
+- **Generador de código**: recorre el AST con el mismo patrón de despacho por `isinstance` que las fases anteriores. Traduce las funciones internas (`qillqay`→`print`, `ranka`→`range`, etc.) y los tipos de parámetro (`yupay`→`int`, `chiqchi`→`float`, `simi`→`str`) a sus equivalentes de Python, y envuelve operadores binarios/unarios entre paréntesis para no depender de que la precedencia de Python coincida exactamente con la gramática de PyChua. Los modificadores (`sapaq`, `sayk_uq`, `ch_usaq`) no tienen traducción a nivel de función suelta y se ignoran en esta fase — `ch_usaq` ya se valida en el semántico.
 
 ## 📚 Contexto académico
 

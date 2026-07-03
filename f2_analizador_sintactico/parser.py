@@ -10,7 +10,7 @@ from f2_analizador_sintactico.nodos import (
     NodoAST, NodoPrograma, NodoFuncion, NodoParam, NodoClase,
     NodoAsignacion, NodoRetorno, NodoIf, NodoWhile, NodoFor,
     NodoBreak, NodoContinua,
-    NodoBinario, NodoUnario, NodoLlamada, NodoAccesoAtributo,
+    NodoBinario, NodoUnario, NodoLlamada, NodoLlamadaMetodo, NodoAccesoAtributo,
     NodoIdentificador, NodoLiteral, NodoLista,
 )
 
@@ -426,11 +426,7 @@ class Parser:
                 self.avanzar()
                 args = self._parsear_args()
                 self.esperar(TipoToken.PAREN_CIERRA)
-                nodo = NodoLlamada(
-                    nombre=attr,
-                    args=[nodo] + args,
-                    linea=tok.linea,
-                )
+                nodo = NodoLlamadaMetodo(objeto=nodo, metodo=attr, args=args, linea=tok.linea)
             else:
                 nodo = NodoAccesoAtributo(objeto=nodo, atributo=attr, linea=tok.linea)
 
@@ -527,6 +523,13 @@ def imprimir_ast(nodo: NodoAST, indent: int = 0) -> None:
 
     elif isinstance(nodo, NodoLlamada):
         print(f"{prefijo}Llamada '{nodo.nombre}'  (L{nodo.linea})")
+        for arg in nodo.args:
+            imprimir_ast(arg, indent + 1)
+
+    elif isinstance(nodo, NodoLlamadaMetodo):
+        print(f"{prefijo}LlamadaMetodo '.{nodo.metodo}'  (L{nodo.linea})")
+        print(f"{prefijo}  Objeto:")
+        imprimir_ast(nodo.objeto, indent + 2)
         for arg in nodo.args:
             imprimir_ast(arg, indent + 1)
 

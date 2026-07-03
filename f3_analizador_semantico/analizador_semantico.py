@@ -12,7 +12,7 @@ from f2_analizador_sintactico.nodos import (
     NodoAST, NodoPrograma, NodoFuncion, NodoClase,
     NodoAsignacion, NodoRetorno, NodoIf, NodoWhile, NodoFor,
     NodoBreak, NodoContinua,
-    NodoBinario, NodoUnario, NodoLlamada, NodoAccesoAtributo,
+    NodoBinario, NodoUnario, NodoLlamada, NodoLlamadaMetodo, NodoAccesoAtributo,
     NodoIdentificador, NodoLiteral, NodoLista,
 )
 
@@ -64,12 +64,9 @@ class AnalizadorSemantico:
     aridad de llamadas, uso de 'kutichiy'/'usqhaychiy'/'katiy' fuera de contexto
     y compatibilidad básica de tipos en operaciones.
 
-    Nota de diseño: el parser reutiliza NodoLlamada tanto para llamadas directas
-    (foo(x)) como para llamadas a método (obj.foo(x) -> NodoLlamada('foo', [obj, x])),
-    sin un indicador que las distinga. Por eso la validación de existencia/aridad
-    solo se aplica a nombres que resuelven a una función o clase global conocida;
-    el resto se asume como una posible llamada a método dinámico y no se reporta
-    como error, para evitar falsos positivos.
+    Las llamadas a método (obj.metodo(...)) llegan como NodoLlamadaMetodo, ya
+    separadas de las llamadas directas (NodoLlamada) desde el parser, así que
+    solo estas últimas se validan contra la tabla de funciones/clases globales.
     """
 
     def __init__(self):
@@ -216,6 +213,12 @@ class AnalizadorSemantico:
         if isinstance(nodo, NodoLlamada):
             return self._visitar_llamada(nodo, ambito)
 
+        if isinstance(nodo, NodoLlamadaMetodo):
+            self._visitar_expr(nodo.objeto, ambito)
+            for arg in nodo.args:
+                self._visitar_expr(arg, ambito)
+            return None   # el tipo de retorno de un método no es verificable estáticamente
+
         if isinstance(nodo, NodoAccesoAtributo):
             self._visitar_expr(nodo.objeto, ambito)
             return None   # el tipo de un atributo no es verificable estáticamente
@@ -294,8 +297,7 @@ class AnalizadorSemantico:
         if simbolo is not None and simbolo.categoria == "clase":
             return simbolo.nombre   # instanciación: el tipo resultante es la propia clase
 
-        # Nombre no reconocido como función/clase global: puede ser una llamada a
-        # método dinámico (ver nota de diseño en la clase). No se reporta error.
+        self._error(f"Función '{nodo.nombre}' no declarada", nodo.linea)
         return None
 
 

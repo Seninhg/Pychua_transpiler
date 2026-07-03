@@ -123,6 +123,14 @@ class NodoLlamada(NodoAST):
 
 
 @dataclass
+class NodoLlamadaMetodo(NodoAST):
+    objeto : NodoAST
+    metodo : str
+    args   : List[NodoAST]
+    linea  : int = 0
+
+
+@dataclass
 class NodoAccesoAtributo(NodoAST):
     objeto   : NodoAST
     atributo : str
