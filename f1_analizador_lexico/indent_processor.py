@@ -3,7 +3,7 @@ import os
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from typing import List
-from analizador_lexico.analizador_lexico import Token, TipoToken
+from f1_analizador_lexico.analizador_lexico import Token, TipoToken
 
 
 class IndentProcessor:

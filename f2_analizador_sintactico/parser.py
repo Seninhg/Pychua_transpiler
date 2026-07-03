@@ -4,9 +4,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from typing import List, Optional
 
-from analizador_lexico.analizador_lexico import LexerQuechua, Token, TipoToken
-from analizador_lexico.indent_processor   import IndentProcessor
-from analizador_sintactico.nodos import (
+from f1_analizador_lexico.analizador_lexico import LexerQuechua, Token, TipoToken
+from f1_analizador_lexico.indent_processor   import IndentProcessor
+from f2_analizador_sintactico.nodos import (
     NodoAST, NodoPrograma, NodoFuncion, NodoParam, NodoClase,
     NodoAsignacion, NodoRetorno, NodoIf, NodoWhile, NodoFor,
     NodoBreak, NodoContinua,
