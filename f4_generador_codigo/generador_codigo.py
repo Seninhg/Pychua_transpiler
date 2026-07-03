@@ -6,10 +6,10 @@ from typing import List, Optional
 
 from f1_analizador_lexico.analizador_lexico import TipoToken
 from f2_analizador_sintactico.nodos import (
-    NodoAST, NodoPrograma, NodoFuncion, NodoParam, NodoClase,
+    NodoAST, NodoPrograma, NodoFuncion, NodoParam,
     NodoAsignacion, NodoRetorno, NodoIf, NodoWhile, NodoFor,
     NodoBreak, NodoContinua,
-    NodoBinario, NodoUnario, NodoLlamada, NodoLlamadaMetodo, NodoAccesoAtributo,
+    NodoBinario, NodoUnario, NodoLlamada,
     NodoIdentificador, NodoLiteral, NodoLista,
 )
 
@@ -92,16 +92,8 @@ class GeneradorCodigo:
 
     def _generar_sentencia(self, nodo: NodoAST, nivel: int) -> None:
         if isinstance(nodo, NodoFuncion):
-            # Los modificadores (sapaq, sayk_uq, ch_usaq) no tienen traducción
-            # directa en Python a nivel de función suelta; ch_usaq ya se validó
-            # en la fase semántica (una función void no puede retornar valor).
             params = ", ".join(self._generar_param(p) for p in nodo.params)
             self._emitir(f"def {nodo.nombre}({params}):", nivel)
-            self._generar_bloque(nodo.cuerpo, nivel + 1)
-            self._linea_en_blanco()
-
-        elif isinstance(nodo, NodoClase):
-            self._emitir(f"class {nodo.nombre}:", nivel)
             self._generar_bloque(nodo.cuerpo, nivel + 1)
             self._linea_en_blanco()
 
@@ -169,13 +161,6 @@ class GeneradorCodigo:
             nombre_py = FUNCIONES_INTERNAS_PY.get(nodo.nombre, nodo.nombre)
             args = ", ".join(self._expr(a) for a in nodo.args)
             return f"{nombre_py}({args})"
-
-        if isinstance(nodo, NodoLlamadaMetodo):
-            args = ", ".join(self._expr(a) for a in nodo.args)
-            return f"{self._expr(nodo.objeto)}.{nodo.metodo}({args})"
-
-        if isinstance(nodo, NodoAccesoAtributo):
-            return f"{self._expr(nodo.objeto)}.{nodo.atributo}"
 
         if isinstance(nodo, NodoLista):
             elementos = ", ".join(self._expr(e) for e in nodo.elementos)

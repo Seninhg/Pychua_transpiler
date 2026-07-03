@@ -7,10 +7,10 @@ from typing import List, Optional
 from f1_analizador_lexico.analizador_lexico import LexerQuechua, Token, TipoToken
 from f1_analizador_lexico.indent_processor   import IndentProcessor
 from f2_analizador_sintactico.nodos import (
-    NodoAST, NodoPrograma, NodoFuncion, NodoParam, NodoClase,
+    NodoAST, NodoPrograma, NodoFuncion, NodoParam,
     NodoAsignacion, NodoRetorno, NodoIf, NodoWhile, NodoFor,
     NodoBreak, NodoContinua,
-    NodoBinario, NodoUnario, NodoLlamada, NodoLlamadaMetodo, NodoAccesoAtributo,
+    NodoBinario, NodoUnario, NodoLlamada,
     NodoIdentificador, NodoLiteral, NodoLista,
 )
 
@@ -38,9 +38,8 @@ class Parser:
 
     Gramática (simplificada):
         programa      → declaracion* EOF
-        declaracion   → def_funcion | def_clase | sentencia
-        def_funcion   → modificadores? 'ruway' IDENT '(' params? ')' ':' bloque
-        def_clase     → 'ayllu' IDENT_CLASE ':' bloque
+        declaracion   → def_funcion | sentencia
+        def_funcion   → 'ruway' IDENT '(' params? ')' ':' bloque
         bloque        → INDENT sentencia+ DEDENT
         sentencia     → retorno | si | mientras | para | break | continua | expr_stmt
         expr_stmt     → expresion ('=' expresion)?
@@ -126,21 +125,11 @@ class Parser:
     # ------------------------------------------------------------------
 
     def _parsear_declaracion(self) -> NodoAST:
-        tok = self.actual()
-
-        # Modificadores opcionales antes de 'ruway'
-        modificadores: List[str] = []
-        while tok.tipo in (TipoToken.MODIFICADOR, TipoToken.MODIFICADOR_ACCESO):
-            modificadores.append(self.avanzar().lexema)
-            tok = self.actual()
-
         if self.ver_lexema("ruway"):
-            return self._parsear_funcion(modificadores)
-        if self.ver_lexema("ayllu"):
-            return self._parsear_clase()
+            return self._parsear_funcion()
         return self._parsear_sentencia()
 
-    def _parsear_funcion(self, modificadores: List[str]) -> NodoFuncion:
+    def _parsear_funcion(self) -> NodoFuncion:
         linea = self.actual().linea
         self.esperar(TipoToken.PALABRA_CLAVE, "ruway")
         nombre = self.esperar(TipoToken.IDENTIFICADOR).lexema
@@ -149,8 +138,7 @@ class Parser:
         self.esperar(TipoToken.PAREN_CIERRA)
         self.esperar(TipoToken.DOS_PUNTOS)
         cuerpo = self._parsear_bloque()
-        return NodoFuncion(nombre=nombre, params=params, cuerpo=cuerpo,
-                           modificadores=modificadores, linea=linea)
+        return NodoFuncion(nombre=nombre, params=params, cuerpo=cuerpo, linea=linea)
 
     def _parsear_params(self) -> List[NodoParam]:
         params: List[NodoParam] = []
@@ -169,14 +157,6 @@ class Parser:
             tipo = self.avanzar().lexema
         nombre = self.esperar(TipoToken.IDENTIFICADOR).lexema
         return NodoParam(nombre=nombre, tipo=tipo)
-
-    def _parsear_clase(self) -> NodoClase:
-        linea = self.actual().linea
-        self.esperar(TipoToken.PALABRA_CLAVE, "ayllu")
-        nombre = self.esperar(TipoToken.IDENTIFICADOR_CLASE).lexema
-        self.esperar(TipoToken.DOS_PUNTOS)
-        cuerpo = self._parsear_bloque()
-        return NodoClase(nombre=nombre, cuerpo=cuerpo, linea=linea)
 
     # ------------------------------------------------------------------
     #  Bloque (delimitado por INDENT / DEDENT)
@@ -379,8 +359,8 @@ class Parser:
         if tok.tipo == TipoToken.FUNCION_INTERNA:
             return self._parsear_llamada_interna()
 
-        # Identificador: variable, llamada de función, acceso a atributo
-        if tok.tipo in (TipoToken.IDENTIFICADOR, TipoToken.IDENTIFICADOR_CLASE):
+        # Identificador: variable o llamada a función
+        if tok.tipo == TipoToken.IDENTIFICADOR:
             return self._parsear_identificador_o_llamada()
 
         raise ErrorSintactico(
@@ -408,29 +388,16 @@ class Parser:
         return NodoLlamada(nombre=tok.lexema, args=args, linea=tok.linea)
 
     def _parsear_identificador_o_llamada(self) -> NodoAST:
-        tok    = self.avanzar()
-        nodo   : NodoAST = NodoIdentificador(nombre=tok.lexema, linea=tok.linea)
+        tok = self.avanzar()
 
         # Llamada a función: nombre(...)
         if self.ver(TipoToken.PAREN_ABRE):
             self.avanzar()
             args = self._parsear_args()
             self.esperar(TipoToken.PAREN_CIERRA)
-            nodo = NodoLlamada(nombre=tok.lexema, args=args, linea=tok.linea)
+            return NodoLlamada(nombre=tok.lexema, args=args, linea=tok.linea)
 
-        # Acceso a atributo: objeto.atributo o objeto.metodo(...)
-        while self.ver(TipoToken.PUNTO):
-            self.avanzar()
-            attr = self.esperar(TipoToken.IDENTIFICADOR).lexema
-            if self.ver(TipoToken.PAREN_ABRE):
-                self.avanzar()
-                args = self._parsear_args()
-                self.esperar(TipoToken.PAREN_CIERRA)
-                nodo = NodoLlamadaMetodo(objeto=nodo, metodo=attr, args=args, linea=tok.linea)
-            else:
-                nodo = NodoAccesoAtributo(objeto=nodo, atributo=attr, linea=tok.linea)
-
-        return nodo
+        return NodoIdentificador(nombre=tok.lexema, linea=tok.linea)
 
     def _parsear_args(self) -> List[NodoAST]:
         args: List[NodoAST] = []
@@ -457,16 +424,10 @@ def imprimir_ast(nodo: NodoAST, indent: int = 0) -> None:
             imprimir_ast(hijo, indent + 1)
 
     elif isinstance(nodo, NodoFuncion):
-        mods = f" [{', '.join(nodo.modificadores)}]" if nodo.modificadores else ""
-        print(f"{prefijo}Funcion '{nodo.nombre}'{mods}  (L{nodo.linea})")
+        print(f"{prefijo}Funcion '{nodo.nombre}'  (L{nodo.linea})")
         for p in nodo.params:
             tipo_str = f": {p.tipo}" if p.tipo else ""
             print(f"{prefijo}  Param '{p.nombre}'{tipo_str}")
-        for hijo in nodo.cuerpo:
-            imprimir_ast(hijo, indent + 1)
-
-    elif isinstance(nodo, NodoClase):
-        print(f"{prefijo}Clase '{nodo.nombre}'  (L{nodo.linea})")
         for hijo in nodo.cuerpo:
             imprimir_ast(hijo, indent + 1)
 
@@ -525,17 +486,6 @@ def imprimir_ast(nodo: NodoAST, indent: int = 0) -> None:
         print(f"{prefijo}Llamada '{nodo.nombre}'  (L{nodo.linea})")
         for arg in nodo.args:
             imprimir_ast(arg, indent + 1)
-
-    elif isinstance(nodo, NodoLlamadaMetodo):
-        print(f"{prefijo}LlamadaMetodo '.{nodo.metodo}'  (L{nodo.linea})")
-        print(f"{prefijo}  Objeto:")
-        imprimir_ast(nodo.objeto, indent + 2)
-        for arg in nodo.args:
-            imprimir_ast(arg, indent + 1)
-
-    elif isinstance(nodo, NodoAccesoAtributo):
-        print(f"{prefijo}Atributo '{nodo.atributo}'  (L{nodo.linea})")
-        imprimir_ast(nodo.objeto, indent + 1)
 
     elif isinstance(nodo, NodoIdentificador):
         print(f"{prefijo}Identificador '{nodo.nombre}'  (L{nodo.linea})")

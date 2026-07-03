@@ -39,19 +39,9 @@ qillqay(huñuy(5, 3))
 | `in`        | `ukhupi`      | "dentro de"                   | `PALABRA_CLAVE` |
 | `return`    | `kutichiy`    | "devolver / regresar"         | `PALABRA_CLAVE` |
 | `def`       | `ruway`       | "hacer / función"             | `PALABRA_CLAVE` |
-| `class`     | `ayllu`       | "comunidad / clase"           | `PALABRA_CLAVE` |
-| `import`    | `tanqay`      | "traer / importar"            | `PALABRA_CLAVE` |
 | `break`     | `usqhaychiy`  | "interrumpir"                 | `PALABRA_CLAVE` |
 | `continue`  | `katiy`       | "continuar"                   | `PALABRA_CLAVE` |
 | `not`       | `mana`        | "no / negación"               | `PALABRA_CLAVE` |
-
-### Modificadores
-
-| Python     | PyChua    | Significado literal | Tipo de token       |
-|------------|-----------|---------------------|---------------------|
-| `static`   | `sayk_uq` | "estático"          | `MODIFICADOR`       |
-| `void`     | `ch_usaq` | "vacío"             | `MODIFICADOR`       |
-| `public`   | `sapaq`   | "público / propio"  | `MODIFICADOR_ACCESO`|
 
 ### Tipos de dato
 
@@ -112,7 +102,6 @@ qillqay(huñuy(5, 3))
 | `]`     | Corchete cierra      | `CORCHETE_CIERRA`|
 | `:`     | Dos puntos           | `DOS_PUNTOS`     |
 | `,`     | Coma                 | `COMA`           |
-| `.`     | Punto                | `PUNTO`          |
 
 ### Literales y identificadores
 
@@ -122,7 +111,6 @@ qillqay(huñuy(5, 3))
 | Número flotante        | `3.14`, `0.5`             | `LITERAL_FLOTANTE`    |
 | Cadena de texto        | `"hola"`, `'mundo'`       | `LITERAL_CADENA`      |
 | Nombre de variable     | `resultado`, `i`, `nombre`| `IDENTIFICADOR`       |
-| Nombre de clase        | `MiClase`, `Animal`       | `IDENTIFICADOR_CLASE` |
 
 ### Tokens especiales (generados por el procesador)
 

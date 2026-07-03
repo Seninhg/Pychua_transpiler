@@ -9,10 +9,10 @@ from f1_analizador_lexico.analizador_lexico import (
 )
 from f3_analizador_semantico.tabla_simbolos import Simbolo, Ambito
 from f2_analizador_sintactico.nodos import (
-    NodoAST, NodoPrograma, NodoFuncion, NodoClase,
+    NodoAST, NodoPrograma, NodoFuncion,
     NodoAsignacion, NodoRetorno, NodoIf, NodoWhile, NodoFor,
     NodoBreak, NodoContinua,
-    NodoBinario, NodoUnario, NodoLlamada, NodoLlamadaMetodo, NodoAccesoAtributo,
+    NodoBinario, NodoUnario, NodoLlamada,
     NodoIdentificador, NodoLiteral, NodoLista,
 )
 
@@ -60,21 +60,17 @@ FUNCIONES_INTERNAS_ARIDAD = {
 class AnalizadorSemantico:
     """
     Recorre el AST producido por el Parser y valida lo que la gramática por sí
-    sola no puede atrapar: variables no declaradas, funciones/clases repetidas,
+    sola no puede atrapar: variables no declaradas, funciones repetidas,
     aridad de llamadas, uso de 'kutichiy'/'usqhaychiy'/'katiy' fuera de contexto
     y compatibilidad básica de tipos en operaciones.
-
-    Las llamadas a método (obj.metodo(...)) llegan como NodoLlamadaMetodo, ya
-    separadas de las llamadas directas (NodoLlamada) desde el parser, así que
-    solo estas últimas se validan contra la tabla de funciones/clases globales.
     """
 
     def __init__(self):
-        self.global_ambito   = Ambito("global")
-        self.errores         : List[str] = []
-        self.ambitos         : List[Ambito] = [self.global_ambito]
-        self._pila_funciones : List[dict] = []
-        self._nivel_bucle    = 0
+        self.global_ambito  = Ambito("global")
+        self.errores        : List[str] = []
+        self.ambitos        : List[Ambito] = [self.global_ambito]
+        self._nivel_funcion = 0
+        self._nivel_bucle   = 0
 
     # ------------------------------------------------------------------
     #  Punto de entrada
@@ -97,10 +93,6 @@ class AnalizadorSemantico:
                 simbolo = Simbolo(nodo.nombre, "funcion", linea=nodo.linea, num_params=len(nodo.params))
                 if not self.global_ambito.declarar(simbolo):
                     self._error(f"La función '{nodo.nombre}' ya fue declarada", nodo.linea)
-            elif isinstance(nodo, NodoClase):
-                simbolo = Simbolo(nodo.nombre, "clase", linea=nodo.linea)
-                if not self.global_ambito.declarar(simbolo):
-                    self._error(f"La clase '{nodo.nombre}' ya fue declarada", nodo.linea)
 
     def _error(self, mensaje: str, linea: int) -> None:
         self.errores.append(f"  {ErrorSemantico(mensaje, linea)}")
@@ -113,19 +105,13 @@ class AnalizadorSemantico:
         if isinstance(nodo, NodoFuncion):
             self._visitar_funcion(nodo)
 
-        elif isinstance(nodo, NodoClase):
-            self._visitar_clase(nodo)
-
         elif isinstance(nodo, NodoAsignacion):
             tipo = self._visitar_expr(nodo.valor, ambito)
             ambito.declarar(Simbolo(nodo.nombre, "variable", tipo=tipo, linea=nodo.linea))
 
         elif isinstance(nodo, NodoRetorno):
-            if not self._pila_funciones:
+            if self._nivel_funcion == 0:
                 self._error("'kutichiy' (return) usado fuera de una función", nodo.linea)
-            elif self._pila_funciones[-1]["void"] and nodo.valor is not None:
-                nombre_fn = self._pila_funciones[-1]["nombre"]
-                self._error(f"La función void '{nombre_fn}' no puede retornar un valor", nodo.linea)
             if nodo.valor is not None:
                 self._visitar_expr(nodo.valor, ambito)
 
@@ -175,19 +161,10 @@ class AnalizadorSemantico:
             nombres_vistos.add(param.nombre)
             ambito_funcion.declarar(Simbolo(param.nombre, "parametro", tipo=param.tipo, linea=nodo.linea))
 
-        self._pila_funciones.append({
-            "nombre": nodo.nombre,
-            "void"  : "ch_usaq" in nodo.modificadores,
-        })
+        self._nivel_funcion += 1
         for sentencia in nodo.cuerpo:
             self._visitar(sentencia, ambito_funcion)
-        self._pila_funciones.pop()
-
-    def _visitar_clase(self, nodo: NodoClase) -> None:
-        ambito_clase = Ambito(f"clase '{nodo.nombre}'", padre=self.global_ambito)
-        self.ambitos.append(ambito_clase)
-        for sentencia in nodo.cuerpo:
-            self._visitar(sentencia, ambito_clase)
+        self._nivel_funcion -= 1
 
     # ------------------------------------------------------------------
     #  Expresiones (devuelven el tipo inferido, o None si no es determinable)
@@ -212,16 +189,6 @@ class AnalizadorSemantico:
 
         if isinstance(nodo, NodoLlamada):
             return self._visitar_llamada(nodo, ambito)
-
-        if isinstance(nodo, NodoLlamadaMetodo):
-            self._visitar_expr(nodo.objeto, ambito)
-            for arg in nodo.args:
-                self._visitar_expr(arg, ambito)
-            return None   # el tipo de retorno de un método no es verificable estáticamente
-
-        if isinstance(nodo, NodoAccesoAtributo):
-            self._visitar_expr(nodo.objeto, ambito)
-            return None   # el tipo de un atributo no es verificable estáticamente
 
         if isinstance(nodo, NodoLista):
             for elemento in nodo.elementos:
@@ -293,9 +260,6 @@ class AnalizadorSemantico:
                     nodo.linea,
                 )
             return None
-
-        if simbolo is not None and simbolo.categoria == "clase":
-            return simbolo.nombre   # instanciación: el tipo resultante es la propia clase
 
         self._error(f"Función '{nodo.nombre}' no declarada", nodo.linea)
         return None

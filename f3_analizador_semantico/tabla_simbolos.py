@@ -10,7 +10,7 @@ from typing import Dict, List, Optional
 @dataclass
 class Simbolo:
     nombre     : str
-    categoria  : str              # 'variable' | 'parametro' | 'funcion' | 'clase'
+    categoria  : str              # 'variable' | 'parametro' | 'funcion'
     tipo       : Optional[str] = None
     linea      : int = 0
     num_params : Optional[int] = None   # solo aplica a categoria == 'funcion'
@@ -22,7 +22,7 @@ class Simbolo:
 
 class Ambito:
     """
-    Representa un ámbito de visibilidad (global, función o clase).
+    Representa un ámbito de visibilidad (global o de función).
     La resolución de nombres sube por la cadena de ámbitos padres,
     replicando el alcance léxico de Python.
     """

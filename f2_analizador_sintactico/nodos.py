@@ -1,5 +1,5 @@
 from __future__ import annotations
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from typing import List, Optional, Any
 
 
@@ -32,16 +32,8 @@ class NodoParam(NodoAST):
 
 @dataclass
 class NodoFuncion(NodoAST):
-    nombre      : str
-    params      : List[NodoParam]
-    cuerpo      : List[NodoAST]
-    modificadores: List[str] = field(default_factory=list)
-    linea       : int = 0
-
-
-@dataclass
-class NodoClase(NodoAST):
     nombre : str
+    params : List[NodoParam]
     cuerpo : List[NodoAST]
     linea  : int = 0
 
@@ -120,21 +112,6 @@ class NodoLlamada(NodoAST):
     nombre : str
     args   : List[NodoAST]
     linea  : int = 0
-
-
-@dataclass
-class NodoLlamadaMetodo(NodoAST):
-    objeto : NodoAST
-    metodo : str
-    args   : List[NodoAST]
-    linea  : int = 0
-
-
-@dataclass
-class NodoAccesoAtributo(NodoAST):
-    objeto   : NodoAST
-    atributo : str
-    linea    : int = 0
 
 
 @dataclass

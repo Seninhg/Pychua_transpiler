@@ -10,15 +10,12 @@ from typing import List, Optional
 class TipoToken:
     # Palabras clave
     PALABRA_CLAVE       = "PALABRA_CLAVE"
-    MODIFICADOR         = "MODIFICADOR"
-    MODIFICADOR_ACCESO  = "MODIFICADOR_ACCESO"
 
     # Tipos de dato
     TIPO_DATO           = "TIPO_DATO"
 
     # Identificadores
     IDENTIFICADOR       = "IDENTIFICADOR"
-    IDENTIFICADOR_CLASE = "IDENTIFICADOR_CLASE"
 
     # Funciones internas del lenguaje
     FUNCION_INTERNA     = "FUNCION_INTERNA"
@@ -42,7 +39,6 @@ class TipoToken:
     CORCHETE_CIERRA     = "CORCHETE_CIERRA"
     DOS_PUNTOS          = "DOS_PUNTOS"
     COMA                = "COMA"
-    PUNTO               = "PUNTO"
 
     # Indentación (inyectados por IndentProcessor)
     INDENT              = "INDENT"
@@ -66,17 +62,10 @@ PALABRAS_CLAVE = {
     "tupaq"       : TipoToken.PALABRA_CLAVE,   # for
     "kutichiy"    : TipoToken.PALABRA_CLAVE,   # return
     "ruway"       : TipoToken.PALABRA_CLAVE,   # def (función)
-    "ayllu"       : TipoToken.PALABRA_CLAVE,   # class
-    "tanqay"      : TipoToken.PALABRA_CLAVE,   # import
     "ukhupi"      : TipoToken.PALABRA_CLAVE,   # in (dentro de)
     "usqhaychiy"  : TipoToken.PALABRA_CLAVE,   # break
     "katiy"       : TipoToken.PALABRA_CLAVE,   # continue
     "mana"        : TipoToken.PALABRA_CLAVE,   # not
-
-    # Modificadores
-    "sayk_uq"     : TipoToken.MODIFICADOR,     # static
-    "ch_usaq"     : TipoToken.MODIFICADOR,     # void
-    "sapaq"       : TipoToken.MODIFICADOR_ACCESO,  # public
 
     # Tipos de dato
     "yupay"       : TipoToken.TIPO_DATO,       # int
@@ -148,7 +137,6 @@ PATRONES = [
     (TipoToken.CORCHETE_CIERRA,  r'\]'),
     (TipoToken.DOS_PUNTOS,       r':'),
     (TipoToken.COMA,             r','),
-    (TipoToken.PUNTO,            r'\.'),
 
     # Identificadores y palabras clave (incluye caracteres especiales del quechua)
     ("PALABRA_O_ID",             r"[a-zA-ZñÑáéíóúÁÉÍÓÚüÜ_][a-zA-ZñÑáéíóúÁÉÍÓÚüÜ0-9_']*"),
@@ -188,12 +176,6 @@ class LexerQuechua:
         """Determina si una palabra es reservada o un identificador."""
         if lexema in PALABRAS_CLAVE:
             return Token(PALABRAS_CLAVE[lexema], lexema, linea, columna)
-
-        # Identificador de clase: empieza con mayúscula
-        if lexema[0].isupper():
-            return Token(TipoToken.IDENTIFICADOR_CLASE, lexema, linea, columna)
-
-        # Identificador normal
         return Token(TipoToken.IDENTIFICADOR, lexema, linea, columna)
 
     def analizar(self) -> List[Token]:
