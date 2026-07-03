@@ -1,0 +1,3 @@
+@Hola, esto debería ser ignorado
+ruway saludar(nombre):
+    qillqay("Hola " + nombre + ", cómo estás?")

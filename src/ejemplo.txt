@@ -1,0 +1,28 @@
+@ Función que suma dos números
+ruway sumar(a, b):
+    resultado = a + b
+    kutichiy resultado
+
+@ Función con condicional
+ruway maximo(a, b):
+    ari_chayqa (a > b):
+        kutichiy a
+    mana_chayqa:
+        kutichiy b
+
+@ Función con bucle while
+ruway contador(n):
+    i = 0
+    micha (i < n):
+        qillqay(i)
+        i = i + 1
+
+@ Función con bucle for
+ruway mostrar_rango(n):
+    tupaq x ukhupi ranka(n):
+        qillqay(x)
+
+@ Programa principal
+resultado = sumar(5, 3)
+qillqay(resultado)
+qillqay(maximo(10, 20))

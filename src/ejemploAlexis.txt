@@ -1,0 +1,10 @@
+@Crear una función que permita entrar a 
+@una discoteca si la persona es mayor de edad
+
+ruway entrada(edad):
+    ari_chayqa(edad >= 18):
+        qillqay("Puedes pasar a la discoteca")
+    mana_chayqa:
+        qillqay("No puedes pasar")
+
+entrada(22)
